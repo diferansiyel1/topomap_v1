@@ -82,11 +82,31 @@ def visualization_tab():
     st.info("💡 **Örnek Format:** CSV verinizin ilk sütunu kanal adları, diğer sütunlar farklı koşulları (örn. Erken-Pre, Geç-Pre) temsil etmelidir.")
     
     # Veri yapıştırma alanı
-    metric_data_input = st.text_area(
-        "Metrik Verileri Yapıştırın (CSV formatında):",
-        height=300,
-        help="Örnek format:\nKanal,Erken-Pre,Geç-Pre\nFP1-F7,0.80395722,0.64169454\nF7-T7,0.77854514,0.55379151\n\nVeya:\nKanal,DFA\nF3-C3,0.53246278\nF4-C4,0.53986818"
+    st.markdown("**Veri Formatı Seçenekleri:**")
+    data_format = st.radio(
+        "Veri formatını seçin:",
+        ["CSV Format", "Doğrudan Kopyala-Yapıştır (Tab/Boşluk ile ayrılmış)"],
+        index=1
     )
+    
+    if data_format == "CSV Format":
+        metric_data_input = st.text_area(
+            "Metrik Verileri Yapıştırın (CSV formatında):",
+            height=200,
+            help="Örnek format:\nKanal,Erken-Pre,Geç-Pre\nFP1-F7,0.80395722,0.64169454\nF7-T7,0.77854514,0.55379151\n\nVeya:\nKanal,DFA\nF3-C3,0.53246278\nF4-C4,0.53986818"
+        )
+    else:
+        st.info("💡 **Doğrudan Kopyala-Yapıştır:** Verilerinizi tab veya boşluk ile ayrılmış olarak yapıştırabilirsiniz. Örnek:")
+        st.code("""Predicted means (LS means)	Erken - Pre	Geç - Pre
+FP1-F7	1,784	2,117
+F7-T7	3,773	3,267
+T7-P7	6,114	4,117""")
+        
+        metric_data_input = st.text_area(
+            "Verileri Yapıştırın (Tab/Boşluk ile ayrılmış):",
+            height=300,
+            help="Verilerinizi doğrudan kopyalayıp buraya yapıştırabilirsiniz. Tab veya boşluk ile ayrılmış olmalıdır."
+        )
     
     if metric_data_input:
         try:
@@ -96,17 +116,42 @@ def visualization_tab():
             import mne
             import numpy as np
             
-            # CSV verisini oku - virgül ve noktalı virgül desteği
-            try:
-                df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=',')
-            except:
-                # Türkçe format için noktalı virgül desteği
-                df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=';')
-                # Virgülleri nokta ile değiştir (Türkçe sayı formatı)
+            # Veri formatına göre okuma
+            if data_format == "CSV Format":
+                # CSV verisini oku - virgül ve noktalı virgül desteği
+                try:
+                    df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=',')
+                except:
+                    # Türkçe format için noktalı virgül desteği
+                    df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=';')
+                    # Virgülleri nokta ile değiştir (Türkçe sayı formatı)
+                    for col in df_metrics.columns:
+                        if df_metrics[col].dtype == 'object':
+                            try:
+                                df_metrics[col] = df_metrics[col].astype(str).str.replace(',', '.').astype(float)
+                            except:
+                                pass  # Kanal adları için hata verme
+            else:
+                # Tab/boşluk ile ayrılmış veri okuma
+                try:
+                    # Önce tab ile deneyelim
+                    df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep='\t')
+                except:
+                    try:
+                        # Sonra boşluk ile deneyelim
+                        df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep='\s+', engine='python')
+                    except:
+                        # Son çare olarak virgül ile deneyelim
+                        df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=',')
+                
+                # Türkçe sayı formatını düzelt (virgül -> nokta)
                 for col in df_metrics.columns:
                     if df_metrics[col].dtype == 'object':
                         try:
-                            df_metrics[col] = df_metrics[col].astype(str).str.replace(',', '.').astype(float)
+                            # Virgülleri nokta ile değiştir
+                            df_metrics[col] = df_metrics[col].astype(str).str.replace(',', '.')
+                            # Sayısal sütunları float'a çevir
+                            df_metrics[col] = pd.to_numeric(df_metrics[col], errors='ignore')
                         except:
                             pass  # Kanal adları için hata verme
             
@@ -136,7 +181,7 @@ def visualization_tab():
                 return
             
             # Bipolar işleyici oluştur
-            bipolar_processor = bipolar.BipolarProcessor(verbose=False)
+            bipolar_processor = bipolar.BipolarProcessor(verbose=True)
             
             # Topomap parametreleri
             col1, col2 = st.columns(2)
@@ -147,6 +192,25 @@ def visualization_tab():
                 show_contours = st.checkbox("Konturları göster", value=True)
                 show_names = st.checkbox("Kanal adlarını göster", value=True)
                 contours_count = st.slider("Kontur sayısı", 0, 20, 6) if show_contours else 0
+            
+            # Ortak ölçekleme için tüm değerleri topla
+            all_values = []
+            for metric_col in metric_cols:
+                channel_data = dict(zip(df_metrics[channel_col], df_metrics[metric_col]))
+                values, _, _ = bipolar_processor.create_bipolar_topomap_data(
+                    channel_data, montage=montage_type
+                )
+                if len(values) > 0:
+                    all_values.extend(values)
+            
+            # Ortak vmin ve vmax hesapla
+            if all_values:
+                common_vmin = min(all_values)
+                common_vmax = max(all_values)
+                st.info(f"📊 Ortak ölçekleme: {common_vmin:.3f} - {common_vmax:.3f}")
+            else:
+                common_vmin = None
+                common_vmax = None
             
             # Topomap oluştur butonu
             if st.button("🗺️ Topolojik Haritalar Oluştur", type="primary"):
@@ -162,6 +226,13 @@ def visualization_tab():
                         values, channel_names, positions = bipolar_processor.create_bipolar_topomap_data(
                             channel_data, montage=montage_type
                         )
+                        
+                        # Debug bilgileri göster
+                        st.write(f"**Debug Bilgileri - {metric_col}:**")
+                        st.write(f"- Toplam kanal sayısı: {len(channel_data)}")
+                        st.write(f"- Koordinat bulunan kanal sayısı: {len(values)}")
+                        st.write(f"- Bulunan kanallar: {channel_names}")
+                        st.write(f"- Koordinat bulunamayan kanallar: {set(channel_data.keys()) - set(channel_names)}")
                         
                         if len(values) > 0:
                             # MNE Info objesi oluştur
@@ -182,8 +253,8 @@ def visualization_tab():
                                 fig = visualizer.plot_topomap(
                                     values=values,
                                     info=info,
-                                    vmin=values.min() if len(values) > 1 else None,
-                                    vmax=values.max() if len(values) > 1 else None,
+                                    vmin=common_vmin,
+                                    vmax=common_vmax,
                                     cmap=cmap,
                                     contours=contours_count,
                                     show_names=show_names,
@@ -246,8 +317,8 @@ def visualization_tab():
                                             info=info,
                                             rows=rows,
                                             cols=cols,
-                                            vmin=None,  # Otomatik ölçekleme
-                                            vmax=None,
+                                            vmin=common_vmin,  # Ortak ölçekleme
+                                            vmax=common_vmax,
                                             cmap=cmap,
                                             contours=contours_count,
                                             show_names=show_names

@@ -238,6 +238,18 @@ class BipolarProcessor:
         if '-' not in ch_name:
             return None, None, None
             
+        # Önce özel koordinat haritasını kontrol et
+        special_coords = self._get_special_bipolar_coordinates()
+        
+        # Normalize edilmiş kanal adını kontrol et
+        normalized_name = self._normalize_channel_name(ch_name)
+        if normalized_name in special_coords:
+            return special_coords[normalized_name]
+            
+        # Orijinal adı da kontrol et
+        if ch_name in special_coords:
+            return special_coords[ch_name]
+            
         # Montaj yükle
         try:
             if montage == 'standard_1020':
@@ -267,6 +279,82 @@ class BipolarProcessor:
             if self.verbose:
                 console.print(f"[yellow]Koordinat hesaplama hatası: {e}[/yellow]")
             return None, None, None
+    
+    def _normalize_channel_name(self, ch_name: str) -> str:
+        """
+        Kanal adını normalize et - farklı formatları standart hale getir
+        
+        Args:
+            ch_name: Orijinal kanal adı
+            
+        Returns:
+            Normalize edilmiş kanal adı
+        """
+        # Kanal adını normalize et
+        normalized = ch_name.strip()
+        
+        # Yaygın varyasyonları düzelt
+        replacements = {
+            '01': 'O1',  # P3-01 -> P3-O1
+            '02': 'O2',  # P8-02 -> P8-O2
+            'P4-02': 'P4-O2',  # Özel durum
+            'P8-02': 'P8-O2',  # Özel durum
+            'P7-01': 'P7-O1',  # Özel durum
+            'P3-01': 'P3-O1',  # Özel durum
+        }
+        
+        for old, new in replacements.items():
+            if old in normalized:
+                normalized = normalized.replace(old, new)
+                
+        return normalized
+    
+    def _get_special_bipolar_coordinates(self) -> Dict[str, Tuple[float, float, float]]:
+        """
+        Özel bipolar kanal koordinatları - manuel olarak tanımlanmış
+        
+        Returns:
+            Kanal adı -> (x, y, z) koordinatları sözlüğü
+        """
+        # Bu koordinatlar 10-20 sistemine göre manuel olarak hesaplanmıştır
+        special_coords = {
+            # Frontal kanallar
+            'FP1-F7': (0.0, 0.8, 0.0),
+            'FP1-F3': (0.0, 0.9, 0.0),
+            'FP2-F4': (0.0, 0.9, 0.0),
+            'FP2-F8': (0.0, 0.8, 0.0),
+            
+            # Frontal-Temporal
+            'F7-T7': (0.6, 0.4, 0.0),
+            'F3-C3': (0.3, 0.5, 0.0),
+            'F4-C4': (-0.3, 0.5, 0.0),
+            'F8-T8': (-0.6, 0.4, 0.0),
+            
+            # Central
+            'FZ-CZ': (0.0, 0.6, 0.0),
+            'CZ-PZ': (0.0, 0.2, 0.0),
+            
+            # Temporal-Parietal
+            'T7-P7': (0.6, 0.0, 0.0),
+            'C3-P3': (0.3, 0.1, 0.0),
+            'C4-P4': (-0.3, 0.1, 0.0),
+            'T8-P8-0': (-0.6, 0.0, 0.0),
+            'T8-P8-1': (-0.6, 0.0, 0.0),
+            
+            # Parietal-Occipital
+            'P7-O1': (0.3, -0.3, 0.0),
+            'P3-O1': (0.15, -0.3, 0.0),
+            'P4-O2': (-0.15, -0.3, 0.0),
+            'P8-O2': (-0.3, -0.3, 0.0),
+            
+            # Temporal-Frontal
+            'P7-T7': (0.6, 0.0, 0.0),
+            'T7-FT9': (0.6, 0.3, 0.0),
+            'FT9-FT10': (0.0, 0.3, 0.0),
+            'FT10-T8': (-0.6, 0.3, 0.0),
+        }
+        
+        return special_coords
 
     def create_bipolar_topomap_data(self, channel_data: Dict[str, float], 
                                   montage: str = 'standard_1020') -> Tuple[np.ndarray, List[str], Dict[str, np.ndarray]]:
@@ -303,6 +391,9 @@ class BipolarProcessor:
             if '-' in ch_name:  # Bipolar kanal
                 # Orta nokta koordinatlarını hesapla
                 x, y, z = self.get_midpoint_coordinates(ch_name, montage)
+                if self.verbose:
+                    console.print(f"[blue]Kanal: {ch_name} -> Koordinatlar: ({x}, {y}, {z})[/blue]")
+                
                 if x is not None:
                     pos_tuple = (round(x, 6), round(y, 6), round(z, 6))  # Round to avoid floating point precision issues
                     
@@ -312,10 +403,15 @@ class BipolarProcessor:
                         channel_names.append(ch_name)
                         positions[ch_name] = np.array([x, y, z])
                         used_positions.add(pos_tuple)
+                        if self.verbose:
+                            console.print(f"[green]Kanal eklendi: {ch_name}[/green]")
                     else:
                         # Overlapping pozisyon - sadece ilkini kullan, ikincisini atla
                         if self.verbose:
                             console.print(f"[yellow]Overlapping pozisyon tespit edildi, {ch_name} atlanıyor[/yellow]")
+                else:
+                    if self.verbose:
+                        console.print(f"[red]Koordinat bulunamadı: {ch_name}[/red]")
             else:  # Tekil kanal
                 # Montajdan koordinat al
                 if ch_name in ch_pos:
@@ -327,6 +423,11 @@ class BipolarProcessor:
                         channel_names.append(ch_name)
                         positions[ch_name] = pos
                         used_positions.add(pos_tuple)
+                        if self.verbose:
+                            console.print(f"[green]Tekil kanal eklendi: {ch_name}[/green]")
+                else:
+                    if self.verbose:
+                        console.print(f"[red]Tekil kanal koordinat bulunamadı: {ch_name}[/red]")
         
         return np.array(values), channel_names, positions
     
