@@ -1,0 +1,55 @@
+# EEG Topomap Lab - Nonlineer Metrikler Konfigürasyonu
+# Bu dosya nonlineer metrikler için örnek konfigürasyon içerir
+
+input:
+  file: "data/subject03.edf"
+  montage: "standard_1020"
+  channel_mapping: null
+
+segments:
+  early_pre: [0, 300]
+  late_pre: [300, 600]
+  preiktal: [600, 900]
+  interiktal: [900, 1200]
+
+preprocessing:
+  l_freq: 1.0
+  h_freq: 40.0
+  notch_freqs: [50.0]
+  ref_type: "average"
+  resample_freq: 250
+  apply_ica: false
+  apply_asr: true
+
+bipolar_processing:
+  method: "midpoint"  # Orta-nokta yaklaşımı
+  ref_type: "average"
+
+metrics:
+  type: "nonlinear"
+  metrics: ["dfa", "lempel_ziv", "higuchi_fd", "permutation_entropy"]
+  dfa_params:
+    min_window: 10
+    max_window: 100
+    n_windows: 20
+
+statistics:
+  compare: ["preiktal", "interiktal"]
+  test_type: "mannwhitney"  # Non-parametrik test
+  paired: false
+  correction_method: "fdr"
+  alpha: 0.05
+
+visualization:
+  vmin: 0.5
+  vmax: 1.5
+  cmap: "plasma"
+  contours: 8
+  show_names: false
+  title: "Nonlineer Metrikler - Preiktal vs Interiktal"
+
+export:
+  figure: "fig/nonlinear_pre_vs_inter.svg"
+  metadata: "fig/nonlinear_pre_vs_inter.json"
+  formats: ["svg", "png"]
+  dpi: 300

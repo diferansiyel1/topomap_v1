@@ -1,0 +1,51 @@
+# EEG Topomap Lab - Temel Konfigürasyon Örneği
+# Bu dosya temel DFA analizi için örnek konfigürasyon içerir
+
+input:
+  file: "data/subject01.edf"
+  montage: "standard_1020"
+  channel_mapping: null  # JSON dosyası yolu veya null
+
+segments:
+  preiktal: [300, 600]
+  interiktal: [1200, 1500]
+
+preprocessing:
+  l_freq: 1.0
+  h_freq: 40.0
+  notch_freqs: [50.0]
+  ref_type: "average"
+  resample_freq: null  # Yeniden örnekleme frekansı (opsiyonel)
+  apply_ica: false
+  apply_asr: false
+
+bipolar_processing:
+  method: "reference_conversion"  # reference_conversion, midpoint, csd
+  ref_type: "average"
+
+metrics:
+  type: "dfa"
+  dfa_min: 10
+  dfa_max: 100
+  dfa_n_windows: 20
+
+statistics:
+  compare: ["preiktal", "interiktal"]
+  test_type: "ttest"  # ttest, mannwhitney, wilcoxon
+  paired: false
+  correction_method: "fdr"  # fdr, bonferroni, holm
+  alpha: 0.05
+
+visualization:
+  vmin: 0.5
+  vmax: 1.2
+  cmap: "viridis"
+  contours: 0
+  show_names: false
+  title: "DFA Analizi - Preiktal vs Interiktal"
+
+export:
+  figure: "fig/dfa_pre_vs_inter.svg"
+  metadata: "fig/dfa_pre_vs_inter.json"
+  formats: ["svg", "png"]
+  dpi: 300

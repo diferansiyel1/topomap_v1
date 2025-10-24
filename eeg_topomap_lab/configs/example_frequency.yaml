@@ -1,0 +1,59 @@
+# EEG Topomap Lab - Frekans Domeni Analizi Konfigürasyonu
+# Bu dosya frekans domeni analizi için örnek konfigürasyon içerir
+
+input:
+  file: "data/subject02.fif"
+  montage: "standard_1020"
+  channel_mapping: null
+
+segments:
+  rest: [0, 300]
+  task: [300, 600]
+
+preprocessing:
+  l_freq: 0.5
+  h_freq: 100.0
+  notch_freqs: [50.0, 60.0]
+  ref_type: "average"
+  resample_freq: 250
+  apply_ica: true
+  apply_asr: false
+
+bipolar_processing:
+  method: "reference_conversion"
+  ref_type: "average"
+
+metrics:
+  type: "band_power"
+  bands:
+    delta: [0.5, 4]
+    theta: [4, 8]
+    alpha: [8, 13]
+    beta: [13, 30]
+    gamma: [30, 100]
+  relative: true
+  welch_params:
+    nperseg: 1024
+    noverlap: 512
+    nfft: 1024
+
+statistics:
+  compare: ["rest", "task"]
+  test_type: "ttest"
+  paired: true
+  correction_method: "fdr"
+  alpha: 0.05
+
+visualization:
+  vmin: 0.0
+  vmax: 0.6
+  cmap: "viridis"
+  contours: 6
+  show_names: true
+  title: "Alpha Relatif Güç - Rest vs Task"
+
+export:
+  figure: "fig/alpha_rel_rest_vs_task.svg"
+  metadata: "fig/alpha_rel_rest_vs_task.json"
+  formats: ["svg", "png", "pdf"]
+  dpi: 300

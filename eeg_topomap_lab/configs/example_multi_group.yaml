@@ -1,0 +1,62 @@
+# EEG Topomap Lab - Çoklu Grup Analizi Konfigürasyonu
+# Bu dosya çoklu grup karşılaştırması için örnek konfigürasyon içerir
+
+input:
+  file: "data/subject04.fif"
+  montage: "standard_1020"
+  channel_mapping: null
+
+segments:
+  baseline: [0, 300]
+  early_pre: [300, 600]
+  late_pre: [600, 900]
+  preiktal: [900, 1200]
+  interiktal: [1200, 1500]
+
+preprocessing:
+  l_freq: 1.0
+  h_freq: 40.0
+  notch_freqs: [50.0]
+  ref_type: "average"
+  resample_freq: 250
+  apply_ica: true
+  apply_asr: false
+
+bipolar_processing:
+  method: "reference_conversion"
+  ref_type: "average"
+
+metrics:
+  type: "band_power"
+  bands:
+    alpha: [8, 13]
+    beta: [13, 30]
+  relative: true
+  welch_params:
+    nperseg: 1024
+    noverlap: 512
+
+statistics:
+  compare: ["preiktal", "interiktal"]
+  test_type: "ttest"
+  paired: false
+  correction_method: "fdr"
+  alpha: 0.05
+
+visualization:
+  vmin: 0.0
+  vmax: 0.8
+  cmap: "viridis"
+  contours: 6
+  show_names: true
+  title: "Alpha Relatif Güç - Çoklu Grup Analizi"
+  panel_layout:
+    rows: 2
+    cols: 3
+    order: ["baseline", "early_pre", "late_pre", "preiktal", "interiktal"]
+
+export:
+  figure: "fig/multi_group_alpha.svg"
+  metadata: "fig/multi_group_alpha.json"
+  formats: ["svg", "png", "pdf"]
+  dpi: 300
