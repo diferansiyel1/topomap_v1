@@ -294,22 +294,37 @@ class BipolarProcessor:
         Returns:
             Normalize edilmiş kanal adı
         """
+        import re
+        
         # Kanal adını normalize et
         normalized = ch_name.strip()
         
-        # Yaygın varyasyonları düzelt
-        replacements = {
-            '01': 'O1',  # P3-01 -> P3-O1
-            '02': 'O2',  # P8-02 -> P8-O2
-            'P4-02': 'P4-O2',  # Özel durum
-            'P8-02': 'P8-O2',  # Özel durum
-            'P7-01': 'P7-O1',  # Özel durum
-            'P3-01': 'P3-O1',  # Özel durum
-        }
-        
-        for old, new in replacements.items():
-            if old in normalized:
-                normalized = normalized.replace(old, new)
+        # Bipolar kanal: iki elektrot arasında '-' var
+        if '-' in normalized:
+            parts = normalized.split('-')
+            if len(parts) == 2:
+                # Her parçayı ayrı ayrı normalize et
+                ch1 = parts[0].strip()
+                ch2 = parts[1].strip()
+                
+                # Sonunda 01 veya 02 varsa, bunları O1 ve O2'ye çevir
+                if ch1.endswith('01'):
+                    ch1 = ch1[:-2] + 'O1'
+                elif ch1.endswith('02'):
+                    ch1 = ch1[:-2] + 'O2'
+                    
+                if ch2.endswith('01'):
+                    ch2 = ch2[:-2] + 'O1'
+                elif ch2.endswith('02'):
+                    ch2 = ch2[:-2] + 'O2'
+                
+                normalized = f"{ch1}-{ch2}"
+        else:
+            # Tekil kanal
+            if normalized.endswith('01'):
+                normalized = normalized[:-2] + 'O1'
+            elif normalized.endswith('02'):
+                normalized = normalized[:-2] + 'O2'
                 
         return normalized
     
@@ -416,8 +431,14 @@ class BipolarProcessor:
                 pos2 = np.array(ch_pos[ch2])
                 midpoint = (pos1 + pos2) / 2
                 bipolar_coords[pair] = tuple(midpoint)
+                
+                # Normalize edilmiş versiyonunu da ekle (eğer farklıysa)
+                normalized_pair = self._normalize_channel_name(pair)
+                if normalized_pair != pair:
+                    bipolar_coords[normalized_pair] = tuple(midpoint)
+                
                 if self.verbose:
-                    console.print(f"[green]Bipolar koordinat hesaplandı: {pair} -> {midpoint}[/green]")
+                    console.print(f"[green]Bipolar koordinat hesaplandı: {pair} -> {midpoint}[/green]-[yellow]normalized: {normalized_pair}[/yellow]")
             else:
                 if self.verbose:
                     console.print(f"[red]Kanal bulunamadı: {pair} (ch1: {ch1}, ch2: {ch2})[/red]")
