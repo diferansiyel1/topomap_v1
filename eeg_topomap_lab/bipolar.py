@@ -543,20 +543,21 @@ class BipolarProcessor:
                         montage_obj = make_standard_montage('standard_1005')
                     
                     ch_pos = montage_obj.get_positions()['ch_pos']
-                    if ch_name in ch_pos:
-                        pos = np.array(ch_pos[ch_name])
+                    # Normalize edilmiş adı kullan
+                    if normalized_ch_name in ch_pos:
+                        pos = np.array(ch_pos[normalized_ch_name])
                         pos_tuple = (round(pos[0], 4), round(pos[1], 4), round(pos[2], 4))
                         
                         if pos_tuple not in used_positions:
                             values.append(value)
-                            channel_names.append(ch_name)
-                            positions[ch_name] = pos
+                            channel_names.append(normalized_ch_name)
+                            positions[normalized_ch_name] = pos
                             used_positions.add(pos_tuple)
                             if self.verbose:
-                                console.print(f"[green]Tekil kanal eklendi: {ch_name}[/green]")
+                                console.print(f"[green]Tekil kanal eklendi: {normalized_ch_name}[/green]")
                 except:
                     if self.verbose:
-                        console.print(f"[red]Tekil kanal koordinat bulunamadı: {ch_name}[/red]")
+                        console.print(f"[red]Tekil kanal koordinat bulunamadı: {normalized_ch_name}[/red]")
         
         if self.verbose:
             console.print(f"[green]Toplam {len(values)} kanal işlendi[/green]")
