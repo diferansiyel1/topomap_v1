@@ -449,10 +449,24 @@ class BipolarProcessor:
             # Kanal adındaki boşlukları temizle
             clean_ch_name = ch_name.strip()
             
-            if '-' in clean_ch_name:  # Bipolar kanal
-                # Bipolar koordinatları kontrol et
-                if clean_ch_name in bipolar_coords:
-                    x, y, z = bipolar_coords[clean_ch_name]
+            # Kanal adını normalize et (01->O1, 02->O2, vb.)
+            normalized_ch_name = self._normalize_channel_name(clean_ch_name)
+            
+            if '-' in normalized_ch_name:  # Bipolar kanal
+                # Bipolar koordinatları kontrol et - hem orijinal hem normalize edilmiş adı dene
+                if normalized_ch_name in bipolar_coords:
+                    clean_ch_name = normalized_ch_name
+                    ch_name_to_use = normalized_ch_name
+                elif clean_ch_name in bipolar_coords:
+                    ch_name_to_use = clean_ch_name
+                else:
+                    ch_name_to_use = None
+                
+                if ch_name_to_use:
+                    x, y, z = bipolar_coords[ch_name_to_use]
+                    
+                    # normalize edilmiş kanal adını kullan
+                    ch_display_name = normalized_ch_name
                     
                     # Daha hassas pozisyon kontrolü
                     pos_tuple = (round(x, 3), round(y, 3), round(z, 3))
@@ -460,11 +474,11 @@ class BipolarProcessor:
                     # Bu pozisyon daha önce kullanıldı mı kontrol et
                     if pos_tuple not in used_positions:
                         values.append(value)
-                        channel_names.append(clean_ch_name)
-                        positions[clean_ch_name] = np.array([x, y, z])
+                        channel_names.append(ch_display_name)
+                        positions[ch_display_name] = np.array([x, y, z])
                         used_positions.add(pos_tuple)
                         if self.verbose:
-                            console.print(f"[green]Bipolar kanal eklendi: {clean_ch_name} -> ({x:.3f}, {y:.3f}, {z:.3f})[/green]")
+                            console.print(f"[green]Bipolar kanal eklendi: {ch_display_name} -> ({x:.3f}, {y:.3f}, {z:.3f})[/green]")
                     else:
                         # Overlapping pozisyon - offset sistemi
                         offset = 0.02
@@ -475,11 +489,11 @@ class BipolarProcessor:
                         
                         if pos_tuple_offset not in used_positions:
                             values.append(value)
-                            channel_names.append(clean_ch_name)
-                            positions[clean_ch_name] = np.array([x_offset, y_offset, z_offset])
+                            channel_names.append(ch_display_name)
+                            positions[ch_display_name] = np.array([x_offset, y_offset, z_offset])
                             used_positions.add(pos_tuple_offset)
                             if self.verbose:
-                                console.print(f"[green]Bipolar kanal eklendi (offset ile): {clean_ch_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
+                                console.print(f"[green]Bipolar kanal eklendi (offset ile): {ch_display_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
                         else:
                             # Daha büyük offset dene
                             offset = 0.05
@@ -490,14 +504,14 @@ class BipolarProcessor:
                             
                             if pos_tuple_offset not in used_positions:
                                 values.append(value)
-                                channel_names.append(clean_ch_name)
-                                positions[clean_ch_name] = np.array([x_offset, y_offset, z_offset])
+                                channel_names.append(ch_display_name)
+                                positions[ch_display_name] = np.array([x_offset, y_offset, z_offset])
                                 used_positions.add(pos_tuple_offset)
                                 if self.verbose:
-                                    console.print(f"[green]Bipolar kanal eklendi (büyük offset ile): {clean_ch_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
+                                    console.print(f"[green]Bipolar kanal eklendi (büyük offset ile): {ch_display_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
                 else:
                     if self.verbose:
-                        console.print(f"[red]Bipolar koordinat bulunamadı: {clean_ch_name}[/red]")
+                        console.print(f"[red]Bipolar koordinat bulunamadı: {normalized_ch_name}[/red]")
             else:  # Tekil kanal - MNE montajı kullan
                 try:
                     if montage == 'standard_1020':
