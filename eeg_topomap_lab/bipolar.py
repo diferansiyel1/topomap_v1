@@ -236,19 +236,21 @@ class BipolarProcessor:
             (x, y, z) koordinatları veya (None, None, None)
         """
         if '-' not in ch_name:
+            if self.verbose:
+                console.print(f"[yellow]Bipolar kanal değil: {ch_name}[/yellow]")
             return None, None, None
             
         # Önce özel koordinat haritasını kontrol et
         special_coords = self._get_special_bipolar_coordinates()
         
+        # Orijinal adı kontrol et
+        if ch_name in special_coords:
+            return special_coords[ch_name]
+            
         # Normalize edilmiş kanal adını kontrol et
         normalized_name = self._normalize_channel_name(ch_name)
         if normalized_name in special_coords:
             return special_coords[normalized_name]
-            
-        # Orijinal adı da kontrol et
-        if ch_name in special_coords:
-            return special_coords[ch_name]
             
         # Montaj yükle
         try:
@@ -269,10 +271,12 @@ class BipolarProcessor:
                 pos2 = np.array(ch_pos[ch2])
                 # Orta nokta hesapla
                 midpoint = (pos1 + pos2) / 2
+                if self.verbose:
+                    console.print(f"[green]Montaj koordinatı hesaplandı: {ch_name} -> {midpoint}[/green]")
                 return midpoint[0], midpoint[1], midpoint[2]
             else:
                 if self.verbose:
-                    console.print(f"[yellow]Koordinat bulunamadı: {ch1}, {ch2}[/yellow]")
+                    console.print(f"[yellow]Montaj koordinat bulunamadı: {ch1}, {ch2}[/yellow]")
                 return None, None, None
                 
         except Exception as e:
@@ -311,55 +315,119 @@ class BipolarProcessor:
     
     def _get_special_bipolar_coordinates(self) -> Dict[str, Tuple[float, float, float]]:
         """
-        Özel bipolar kanal koordinatları - manuel olarak tanımlanmış
+        Özel bipolar kanal koordinatları - 10-20 sistemine göre optimize edilmiş
         
         Returns:
             Kanal adı -> (x, y, z) koordinatları sözlüğü
         """
-        # Bu koordinatlar 10-20 sistemine göre manuel olarak hesaplanmıştır
+        # Bu koordinatlar 10-20 sistemine göre standart yuvarlak topomap için optimize edilmiştir
+        # X: sol-sağ (-1 to 1), Y: ön-arka (-1 to 1), Z: yukarı-aşağı (0)
         special_coords = {
-            # Frontal kanallar
-            'FP1-F7': (0.0, 0.8, 0.0),
-            'FP1-F3': (0.0, 0.9, 0.0),
-            'FP2-F4': (0.0, 0.9, 0.0),
-            'FP2-F8': (0.0, 0.8, 0.0),
+            # Frontal kanallar - standart dağılım
+            'FP1-F7': (0.3, 0.7, 0.0),
+            'FP1-F3': (0.2, 0.8, 0.0),
+            'FP2-F4': (-0.2, 0.8, 0.0),
+            'FP2-F8': (-0.3, 0.7, 0.0),
             
-            # Frontal-Temporal
+            # Frontal-Temporal - standart ayrım
             'F7-T7': (0.6, 0.4, 0.0),
             'F3-C3': (0.3, 0.5, 0.0),
             'F4-C4': (-0.3, 0.5, 0.0),
             'F8-T8': (-0.6, 0.4, 0.0),
             
-            # Central
+            # Central - merkezi konumlar
             'FZ-CZ': (0.0, 0.6, 0.0),
-            'CZ-PZ': (0.0, 0.2, 0.0),
+            'CZ-PZ': (0.0, 0.0, 0.0),
             
-            # Temporal-Parietal
+            # Temporal-Parietal - standart dağılım
             'T7-P7': (0.6, 0.0, 0.0),
-            'C3-P3': (0.3, 0.1, 0.0),
-            'C4-P4': (-0.3, 0.1, 0.0),
-            'T8-P8-0': (-0.6, 0.0, 0.0),
-            'T8-P8-1': (-0.6, 0.0, 0.0),
+            'C3-P3': (0.3, 0.2, 0.0),
+            'C4-P4': (-0.3, 0.2, 0.0),
+            'T8-P8': (-0.6, 0.0, 0.0),
             
-            # Parietal-Occipital
+            # Parietal-Occipital - standart konumlandırma
             'P7-O1': (0.3, -0.3, 0.0),
             'P3-O1': (0.15, -0.3, 0.0),
             'P4-O2': (-0.15, -0.3, 0.0),
             'P8-O2': (-0.3, -0.3, 0.0),
             
-            # Temporal-Frontal
-            'P7-T7': (0.6, 0.0, 0.0),
-            'T7-FT9': (0.6, 0.3, 0.0),
+            # Temporal-Frontal - standart ayrım
+            'T7-FT9': (0.5, 0.3, 0.0),
             'FT9-FT10': (0.0, 0.3, 0.0),
-            'FT10-T8': (-0.6, 0.3, 0.0),
+            'FT10-T8': (-0.5, 0.3, 0.0),
+            
+            # Ek kanallar - standart koordinatlar
+            'T7-FT9': (0.5, 0.3, 0.0),
+            'P7-T7': (0.6, 0.0, 0.0),
+            'F8-T8': (-0.6, 0.4, 0.0),
+            'T8-P8': (-0.6, 0.0, 0.0),
+            
+            # Yaygın bipolar kanal varyasyonları
+            'FP1-F7': (0.3, 0.7, 0.0),
+            'FP2-F8': (-0.3, 0.7, 0.0),
+            'F3-C3': (0.3, 0.5, 0.0),
+            'F4-C4': (-0.3, 0.5, 0.0),
+            'C3-P3': (0.3, 0.2, 0.0),
+            'C4-P4': (-0.3, 0.2, 0.0),
+            'P3-O1': (0.15, -0.3, 0.0),
+            'P4-O2': (-0.15, -0.3, 0.0),
+            'T7-P7': (0.6, 0.0, 0.0),
+            'T8-P8': (-0.6, 0.0, 0.0),
+            'F7-T7': (0.6, 0.4, 0.0),
+            'F8-T8': (-0.6, 0.4, 0.0),
+            'FZ-CZ': (0.0, 0.6, 0.0),
+            'CZ-PZ': (0.0, 0.0, 0.0),
         }
         
         return special_coords
 
+    def _get_bipolar_coordinates(self, montage: str = 'standard_1020') -> Dict[str, Tuple[float, float, float]]:
+        """
+        Calculate bipolar coordinates from MNE standard montage by computing midpoints
+        
+        Args:
+            montage: MNE montage name to use
+            
+        Returns:
+            Kanal adı -> (x, y, z) koordinatları sözlüğü
+        """
+        from mne.channels import make_standard_montage
+        
+        # Load standard montage
+        montage_obj = make_standard_montage(montage)
+        ch_pos = montage_obj.get_positions()['ch_pos']
+        
+        bipolar_coords = {}
+        
+        # Define bipolar pairs based on user's data
+        bipolar_pairs = [
+            'FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1',
+            'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1',
+            'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2',
+            'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2',
+            'FZ-CZ', 'CZ-PZ',
+            'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8'
+        ]
+        
+        for pair in bipolar_pairs:
+            ch1, ch2 = pair.split('-')
+            if ch1 in ch_pos and ch2 in ch_pos:
+                pos1 = np.array(ch_pos[ch1])
+                pos2 = np.array(ch_pos[ch2])
+                midpoint = (pos1 + pos2) / 2
+                bipolar_coords[pair] = tuple(midpoint)
+                if self.verbose:
+                    console.print(f"[green]Bipolar koordinat hesaplandı: {pair} -> {midpoint}[/green]")
+            else:
+                if self.verbose:
+                    console.print(f"[red]Kanal bulunamadı: {pair} (ch1: {ch1}, ch2: {ch2})[/red]")
+        
+        return bipolar_coords
+
     def create_bipolar_topomap_data(self, channel_data: Dict[str, float], 
                                   montage: str = 'standard_1020') -> Tuple[np.ndarray, List[str], Dict[str, np.ndarray]]:
         """
-        Bipolar kanal verilerini topomap için hazırla
+        Bipolar kanal verilerini topomap için hazırla - bipolar özel koordinat sistemi
         
         Args:
             channel_data: Kanal adı -> değer sözlüğü
@@ -368,66 +436,95 @@ class BipolarProcessor:
         Returns:
             (values, channel_names, positions) - topomap için değerler, kanal adları ve koordinatlar
         """
-        # Montaj yükle
-        try:
-            if montage == 'standard_1020':
-                from mne.channels import make_standard_montage
-                montage_obj = make_standard_montage('standard_1020')
-            else:
-                from mne.channels import make_standard_montage
-                montage_obj = make_standard_montage('standard_1005')
-        except Exception as e:
-            console.print(f"[yellow]Montaj yükleme hatası: {e}[/yellow]")
-            return np.array([]), [], {}
-        
-        # Bipolar kanalları işle
+        # Bipolar kanalları işle - özel koordinat sistemi
         values = []
         channel_names = []
         positions = {}
-        ch_pos = montage_obj.get_positions()['ch_pos']
         used_positions = set()  # Overlapping pozisyonları takip et
         
+        # Bipolar koordinatları al
+        bipolar_coords = self._get_bipolar_coordinates(montage)
+        
         for ch_name, value in channel_data.items():
-            if '-' in ch_name:  # Bipolar kanal
-                # Orta nokta koordinatlarını hesapla
-                x, y, z = self.get_midpoint_coordinates(ch_name, montage)
-                if self.verbose:
-                    console.print(f"[blue]Kanal: {ch_name} -> Koordinatlar: ({x}, {y}, {z})[/blue]")
-                
-                if x is not None:
-                    pos_tuple = (round(x, 6), round(y, 6), round(z, 6))  # Round to avoid floating point precision issues
+            # Kanal adındaki boşlukları temizle
+            clean_ch_name = ch_name.strip()
+            
+            if '-' in clean_ch_name:  # Bipolar kanal
+                # Bipolar koordinatları kontrol et
+                if clean_ch_name in bipolar_coords:
+                    x, y, z = bipolar_coords[clean_ch_name]
+                    
+                    # Daha hassas pozisyon kontrolü
+                    pos_tuple = (round(x, 3), round(y, 3), round(z, 3))
                     
                     # Bu pozisyon daha önce kullanıldı mı kontrol et
                     if pos_tuple not in used_positions:
                         values.append(value)
-                        channel_names.append(ch_name)
-                        positions[ch_name] = np.array([x, y, z])
+                        channel_names.append(clean_ch_name)
+                        positions[clean_ch_name] = np.array([x, y, z])
                         used_positions.add(pos_tuple)
                         if self.verbose:
-                            console.print(f"[green]Kanal eklendi: {ch_name}[/green]")
+                            console.print(f"[green]Bipolar kanal eklendi: {clean_ch_name} -> ({x:.3f}, {y:.3f}, {z:.3f})[/green]")
                     else:
-                        # Overlapping pozisyon - sadece ilkini kullan, ikincisini atla
-                        if self.verbose:
-                            console.print(f"[yellow]Overlapping pozisyon tespit edildi, {ch_name} atlanıyor[/yellow]")
+                        # Overlapping pozisyon - offset sistemi
+                        offset = 0.02
+                        x_offset = x + offset
+                        y_offset = y + offset
+                        z_offset = z + offset
+                        pos_tuple_offset = (round(x_offset, 3), round(y_offset, 3), round(z_offset, 3))
+                        
+                        if pos_tuple_offset not in used_positions:
+                            values.append(value)
+                            channel_names.append(clean_ch_name)
+                            positions[clean_ch_name] = np.array([x_offset, y_offset, z_offset])
+                            used_positions.add(pos_tuple_offset)
+                            if self.verbose:
+                                console.print(f"[green]Bipolar kanal eklendi (offset ile): {clean_ch_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
+                        else:
+                            # Daha büyük offset dene
+                            offset = 0.05
+                            x_offset = x + offset
+                            y_offset = y + offset
+                            z_offset = z + offset
+                            pos_tuple_offset = (round(x_offset, 3), round(y_offset, 3), round(z_offset, 3))
+                            
+                            if pos_tuple_offset not in used_positions:
+                                values.append(value)
+                                channel_names.append(clean_ch_name)
+                                positions[clean_ch_name] = np.array([x_offset, y_offset, z_offset])
+                                used_positions.add(pos_tuple_offset)
+                                if self.verbose:
+                                    console.print(f"[green]Bipolar kanal eklendi (büyük offset ile): {clean_ch_name} -> ({x_offset:.3f}, {y_offset:.3f}, {z_offset:.3f})[/green]")
                 else:
                     if self.verbose:
-                        console.print(f"[red]Koordinat bulunamadı: {ch_name}[/red]")
-            else:  # Tekil kanal
-                # Montajdan koordinat al
-                if ch_name in ch_pos:
-                    pos = np.array(ch_pos[ch_name])
-                    pos_tuple = (round(pos[0], 6), round(pos[1], 6), round(pos[2], 6))
+                        console.print(f"[red]Bipolar koordinat bulunamadı: {clean_ch_name}[/red]")
+            else:  # Tekil kanal - MNE montajı kullan
+                try:
+                    if montage == 'standard_1020':
+                        from mne.channels import make_standard_montage
+                        montage_obj = make_standard_montage('standard_1020')
+                    else:
+                        from mne.channels import make_standard_montage
+                        montage_obj = make_standard_montage('standard_1005')
                     
-                    if pos_tuple not in used_positions:
-                        values.append(value)
-                        channel_names.append(ch_name)
-                        positions[ch_name] = pos
-                        used_positions.add(pos_tuple)
-                        if self.verbose:
-                            console.print(f"[green]Tekil kanal eklendi: {ch_name}[/green]")
-                else:
+                    ch_pos = montage_obj.get_positions()['ch_pos']
+                    if ch_name in ch_pos:
+                        pos = np.array(ch_pos[ch_name])
+                        pos_tuple = (round(pos[0], 4), round(pos[1], 4), round(pos[2], 4))
+                        
+                        if pos_tuple not in used_positions:
+                            values.append(value)
+                            channel_names.append(ch_name)
+                            positions[ch_name] = pos
+                            used_positions.add(pos_tuple)
+                            if self.verbose:
+                                console.print(f"[green]Tekil kanal eklendi: {ch_name}[/green]")
+                except:
                     if self.verbose:
                         console.print(f"[red]Tekil kanal koordinat bulunamadı: {ch_name}[/red]")
+        
+        if self.verbose:
+            console.print(f"[green]Toplam {len(values)} kanal işlendi[/green]")
         
         return np.array(values), channel_names, positions
     

@@ -41,7 +41,7 @@ class EEGVisualizer:
         **kwargs
     ) -> plt.Figure:
         """
-        Topolojik harita çiz
+        Topolojik harita çiz - optimize edilmiş versiyon
         
         Parameters
         ----------
@@ -78,22 +78,23 @@ class EEGVisualizer:
         if self.verbose:
             console.print("[blue]Topolojik harita çiziliyor...[/blue]")
             
-        # Varsayılan maskeleme parametreleri
+        # Varsayılan maskeleme parametreleri - iyileştirilmiş
         if mask_params is None:
             mask_params = {
                 'marker': 'o',
                 'markerfacecolor': 'w',
                 'markeredgecolor': 'k',
-                'markersize': 4,
-                'linewidth': 0
+                'markersize': 6,
+                'linewidth': 1
             }
             
-        # MNE topomap çiz
+        # Figür boyutunu optimize et - daha büyük boyut
         if axes is None:
-            fig, axes = plt.subplots(1, 1, figsize=(6, 6))
+            fig, axes = plt.subplots(1, 1, figsize=(12, 10))
         else:
             fig = axes.figure
             
+        # MNE topomap çiz - klasik yuvarlak format
         im, _ = mne.viz.plot_topomap(
             values,
             info,
@@ -103,22 +104,37 @@ class EEGVisualizer:
             mask_params=mask_params,
             axes=axes,
             show=False,
+            outlines='head',  # Show classic head outline with ears/nose
+            sphere=0.15,       # Manually set sphere radius for larger head outline
+            extrapolate='head',  # Only interpolate within head
+            border='mean',    # Add border for smoother edges
+            res=128,  # Higher resolution for better quality
             **kwargs
         )
         
-        # Renk skalasını manuel olarak ayarla
+        # Renk skalasını manuel olarak ayarla - iyileştirilmiş
         if vmin is not None and vmax is not None:
             im.set_clim(vmin=vmin, vmax=vmax)
+        else:
+            # Otomatik ölçekleme - daha iyi dağılım için
+            vmin_auto = np.percentile(values, 5)
+            vmax_auto = np.percentile(values, 95)
+            im.set_clim(vmin=vmin_auto, vmax=vmax_auto)
         
-        # Başlık ekle
+        # Başlık ekle - iyileştirilmiş
         if title:
-            axes.set_title(title, fontsize=12, fontweight='bold')
+            axes.set_title(title, fontsize=14, fontweight='bold', pad=20)
             
-        # Renk çubuğu ekle
+        # Renk çubuğu ekle - iyileştirilmiş
         if im is not None:
-            cbar = plt.colorbar(im, ax=axes, shrink=0.8)
-            cbar.set_label('Değer', fontsize=10)
+            cbar = plt.colorbar(im, ax=axes, shrink=0.8, aspect=20)
+            cbar.set_label('Değer', fontsize=12, fontweight='bold')
+            cbar.ax.tick_params(labelsize=10)
             
+        # Eksen ayarları - iyileştirilmiş
+        axes.set_aspect('equal')
+        axes.axis('off')
+        
         return fig
     
     def plot_multi_panel_topomap(

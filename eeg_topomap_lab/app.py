@@ -139,7 +139,7 @@ T7-P7	6,114	4,117""")
                 except:
                     try:
                         # Sonra boşluk ile deneyelim
-                        df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep='\s+', engine='python')
+                        df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=r'\s+', engine='python')
                     except:
                         # Son çare olarak virgül ile deneyelim
                         df_metrics = pd.read_csv(io.StringIO(metric_data_input), sep=',')
@@ -151,7 +151,7 @@ T7-P7	6,114	4,117""")
                             # Virgülleri nokta ile değiştir
                             df_metrics[col] = df_metrics[col].astype(str).str.replace(',', '.')
                             # Sayısal sütunları float'a çevir
-                            df_metrics[col] = pd.to_numeric(df_metrics[col], errors='ignore')
+                            df_metrics[col] = pd.to_numeric(df_metrics[col])
                         except:
                             pass  # Kanal adları için hata verme
             
@@ -245,11 +245,12 @@ T7-P7	6,114	4,117""")
                                 custom_montage = make_dig_montage(ch_pos=positions, coord_frame='head')
                                 info.set_montage(custom_montage)
                             
-                            # Topomap çiz
+                            # Topomap çiz - iyileştirilmiş
                             from eeg_topomap_lab.viz import EEGVisualizer
                             visualizer = EEGVisualizer(verbose=False)
                             
                             try:
+                                # Daha iyi görselleştirme için ek parametreler
                                 fig = visualizer.plot_topomap(
                                     values=values,
                                     info=info,
@@ -261,7 +262,7 @@ T7-P7	6,114	4,117""")
                                     title=f"{metric_col} - Topolojik Harita"
                                 )
                                 
-                                st.pyplot(fig)
+                                st.pyplot(fig, width='stretch')
                                 plt.close(fig)
                                 
                                 # İstatistikler
