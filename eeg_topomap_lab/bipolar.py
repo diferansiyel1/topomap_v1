@@ -442,12 +442,6 @@ class BipolarProcessor:
             else:
                 if self.verbose:
                     console.print(f"[red]Kanal bulunamadı: {pair} (ch1: {ch1}, ch2: {ch2})[/red]")
-                    # Eksik kanallar için özel koordinatları kullan
-                    special_coords = self._get_special_bipolar_coordinates()
-                    if pair in special_coords:
-                        bipolar_coords[pair] = special_coords[pair]
-                        if self.verbose:
-                            console.print(f"[yellow]Özel koordinat kullanıldı: {pair} -> {special_coords[pair]}[/yellow]")
         
         return bipolar_coords
 
