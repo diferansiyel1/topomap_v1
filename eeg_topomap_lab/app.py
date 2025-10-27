@@ -196,7 +196,9 @@ T7-P7	6,114	4,117""")
             # Ortak ölçekleme için tüm değerleri topla
             all_values = []
             for metric_col in metric_cols:
-                channel_data = dict(zip(df_metrics[channel_col], df_metrics[metric_col]))
+                # Kanal adlarını temizle
+                channel_names_clean = [str(ch).strip() for ch in df_metrics[channel_col]]
+                channel_data = dict(zip(channel_names_clean, df_metrics[metric_col]))
                 values, _, _ = bipolar_processor.create_bipolar_topomap_data(
                     channel_data, montage=montage_type
                 )
@@ -219,8 +221,9 @@ T7-P7	6,114	4,117""")
                     for metric_col in metric_cols:
                         st.subheader(f"📈 {metric_col}")
                         
-                        # Kanal verilerini hazırla
-                        channel_data = dict(zip(df_metrics[channel_col], df_metrics[metric_col]))
+                        # Kanal verilerini hazırla - kanal adlarını temizle
+                        channel_names_clean = [str(ch).strip() for ch in df_metrics[channel_col]]
+                        channel_data = dict(zip(channel_names_clean, df_metrics[metric_col]))
                         
                         # Bipolar topomap verilerini oluştur
                         values, channel_names, positions = bipolar_processor.create_bipolar_topomap_data(
@@ -288,8 +291,9 @@ T7-P7	6,114	4,117""")
                             try:
                                 # Tüm koşulları bir arada göster
                                 data_dict = {}
+                                channel_names_clean = [str(ch).strip() for ch in df_metrics[channel_col]]
                                 for metric_col in metric_cols:
-                                    channel_data = dict(zip(df_metrics[channel_col], df_metrics[metric_col]))
+                                    channel_data = dict(zip(channel_names_clean, df_metrics[metric_col]))
                                     values, channel_names, positions = bipolar_processor.create_bipolar_topomap_data(
                                         channel_data, montage=montage_type
                                     )
@@ -299,7 +303,7 @@ T7-P7	6,114	4,117""")
                                 if len(data_dict) > 0:
                                     # İlk koşulun info objesini kullan
                                     first_col = metric_cols[0]
-                                    channel_data = dict(zip(df_metrics[channel_col], df_metrics[first_col]))
+                                    channel_data = dict(zip(channel_names_clean, df_metrics[first_col]))
                                     _, channel_names, positions = bipolar_processor.create_bipolar_topomap_data(
                                         channel_data, montage=montage_type
                                     )
