@@ -105,10 +105,10 @@ class EEGVisualizer:
             axes=axes,
             show=False,
             outlines='head',  # Show classic head outline with ears/nose
-            sphere=0.15,       # Manually set sphere radius for larger head outline
+            sphere='auto',    # Auto-detect sphere size based on electrode positions
             extrapolate='head',  # Only interpolate within head
-            border='mean',    # Add border for smoother edges
-            res=128,  # Higher resolution for better quality
+            border=0,         # No border (prevents artifacts)
+            res=64,           # Balanced resolution
             **kwargs
         )
         
