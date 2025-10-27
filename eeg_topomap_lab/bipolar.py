@@ -292,19 +292,12 @@ class BipolarProcessor:
             ch_name: Orijinal kanal adı
             
         Returns:
-            Normalize edilmiş kanal adı (MNE uyumlu: Fp1, Fp2, Fz, Cz, Pz)
+            Normalize edilmiş kanal adı
         """
         import re
         
         # Kanal adını normalize et
         normalized = ch_name.strip()
-        
-        # MNE uyumluluğu için FP -> Fp, CZ -> Cz, FZ -> Fz, PZ -> Pz dönüşümü
-        mapping = {
-            'FP1': 'Fp1', 'FP2': 'Fp2',
-            'FZ': 'Fz', 'CZ': 'Cz', 'PZ': 'Pz',
-            'FPZ': 'Fpz'
-        }
         
         # Bipolar kanal: iki elektrot arasında '-' var
         if '-' in normalized:
@@ -313,10 +306,6 @@ class BipolarProcessor:
                 # Her parçayı ayrı ayrı normalize et
                 ch1 = parts[0].strip()
                 ch2 = parts[1].strip()
-                
-                # Mapping uygula
-                ch1 = mapping.get(ch1, ch1)
-                ch2 = mapping.get(ch2, ch2)
                 
                 # Sonunda 01 veya 02 varsa, bunları O1 ve O2'ye çevir
                 if ch1.endswith('01'):
@@ -332,8 +321,6 @@ class BipolarProcessor:
                 normalized = f"{ch1}-{ch2}"
         else:
             # Tekil kanal
-            normalized = mapping.get(normalized, normalized)
-            
             if normalized.endswith('01'):
                 normalized = normalized[:-2] + 'O1'
             elif normalized.endswith('02'):
@@ -429,11 +416,11 @@ class BipolarProcessor:
         
         # Define bipolar pairs based on user's data
         bipolar_pairs = [
-            'Fp1-F7', 'F7-T7', 'T7-P7', 'P7-O1',
-            'Fp1-F3', 'F3-C3', 'C3-P3', 'P3-O1',
-            'Fp2-F4', 'F4-C4', 'C4-P4', 'P4-O2',
-            'Fp2-F8', 'F8-T8', 'T8-P8', 'P8-O2',
-            'Fz-Cz', 'Cz-Pz',
+            'FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1',
+            'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1',
+            'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2',
+            'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2',
+            'FZ-CZ', 'CZ-PZ',
             'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8'
         ]
         
@@ -454,13 +441,13 @@ class BipolarProcessor:
                     console.print(f"[green]Bipolar koordinat hesaplandı: {pair} -> {midpoint}[/green]-[yellow]normalized: {normalized_pair}[/yellow]")
             else:
                 if self.verbose:
-                    console.print(f"[red]Channel not found in MNE montage: {pair} (ch1: {ch1}, ch2: {ch2})[/red]")
+                    console.print(f"[red]Kanal bulunamadı: {pair} (ch1: {ch1}, ch2: {ch2})[/red]")
                     # Eksik kanallar için özel koordinatları kullan
                     special_coords = self._get_special_bipolar_coordinates()
                     if pair in special_coords:
                         bipolar_coords[pair] = special_coords[pair]
                         if self.verbose:
-                            console.print(f"[yellow]Using special coordinates for: {pair} -> {special_coords[pair]}[/yellow]")
+                            console.print(f"[yellow]Özel koordinat kullanıldı: {pair} -> {special_coords[pair]}[/yellow]")
         
         return bipolar_coords
 
